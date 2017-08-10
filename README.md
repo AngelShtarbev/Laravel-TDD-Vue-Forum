@@ -1,2 +1,2 @@
-# Laravel-Vue-TDD-Forum
-Forum built with Laravel, Vue.js and TDD.
+# Laravel-TDD-Vue-Forum
+Forum built with Laravel(Test Driven Developement), Vue.js.
