@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Exception;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\WithoutMiddleware;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -33,8 +34,9 @@ class ParticipateInForumTest extends TestCase
 
        $this->post($this->thread->path() . '/replies', $this->reply->toArray());
 
-       // Then their reply should be visible on the page
-       $this->get($this->thread->path())->assertSee($this->reply->body);
+       $this->assertDatabaseHas('replies',['body' => $this->reply->body]);
+
+       $this->assertEquals(1, $this->thread->fresh()->replies_count);
     }
 
     /** @test */
@@ -45,5 +47,81 @@ class ParticipateInForumTest extends TestCase
         $reply = make('App\Reply', ['body' => null]);
 
         $this->post($this->thread->path() . '/replies', $reply->toArray())->assertSessionHasErrors('body');
+    }
+
+    /** @test */
+    public function unauthorized_users_cannot_delete_replies()
+    {
+        $reply = create('App\Reply');
+
+        $this->delete("/replies/{$reply->id}")->assertRedirect('login');
+
+        $this->signIn();
+
+        $this->delete("/replies/{$reply->id}")->assertStatus(403);
+    }
+
+    /** @test */
+    public function authorized_users_can_delete_replies()
+    {
+        $this->signIn();
+
+        $reply = create('App\Reply', ['user_id' => auth()->id()]);
+
+        $this->delete("/replies/{$reply->id}")->assertStatus(302);
+
+        $this->assertDatabaseMissing('replies',['id' => $reply->id]);
+
+        $this->assertEquals(0, $reply->thread->fresh()->replies_count);
+    }
+
+    /** @test */
+    public function authorized_users_can_update_replies()
+    {
+        $this->signIn();
+
+        $reply = create('App\Reply', ['user_id' => auth()->id()]);
+
+        $this->patch("/replies/{$reply->id}", ['body' => 'Update request has been sent']);
+
+        $this->assertDatabaseHas('replies', ['id' => $reply->id, 'body' => 'Update request has been sent']);
+    }
+
+    /** @test */
+    public function unauthorized_users_cannot_update_replies()
+    {
+        $reply = create('App\Reply');
+
+        $this->patch("/replies/{$reply->id}")->assertRedirect('login');
+
+        $this->signIn();
+
+        $this->patch("/replies/{$reply->id}")->assertStatus(403);
+    }
+
+    /** @test */
+    public function deny_spam_replies()
+    {
+        $this->signIn();
+
+        $reply = make('App\Reply', [
+            'body' => 'Yahoo Customer Support'
+        ]);
+
+        $this->json('post',$this->thread->path() . '/replies', $reply->toArray())->assertStatus(422);
+    }
+
+    /** @test */
+    public function users_can_reply_only_once_per_minute()
+    {
+        $this->signIn();
+
+        $reply = make('App\Reply', [
+            'body' => 'Some reply here.'
+        ]);
+
+        $this->post($this->thread->path() . '/replies', $reply->toArray())->assertStatus(200);
+
+        $this->post($this->thread->path() . '/replies', $reply->toArray())->assertStatus(429);
     }
 }

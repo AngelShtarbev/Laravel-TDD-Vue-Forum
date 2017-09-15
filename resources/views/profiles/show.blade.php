@@ -5,14 +5,18 @@
     <div class="row">
         <div class="col-md-8 col-md-offset-2">
            <div class="page-header">
-                <h1>{{ $profileUser->name }}</h1>
+               <avatar-form :user="{{$profileUser}}"></avatar-form>
             </div>
-            @foreach($activities as $date => $activity)
+            @forelse($activities as $date => $activity)
                <h3 class="page-header">{{$date}}</h3>
                @foreach($activity as $record)
-                  @include("profiles.activities.{$record->type}", ['activity' => $record])
+                 @if (view()->exists("profiles.activities.{$record->type}"))
+                    @include("profiles.activities.{$record->type}", ['activity' => $record])
+                 @endif
                @endforeach
-            @endforeach
+               @empty
+                <p>There is no activity for this user yet.</p>
+            @endforelse
             {{--{{$threads->links()}}--}}
         </div>
     </div>

@@ -9,14 +9,30 @@ require('./bootstrap');
 
 window.Vue = require('vue');
 
+window.events = new Vue();
+
+window.flash = function(message, level = 'success') {
+    window.events.$emit('flash', {message,level});
+};
+
+Vue.prototype.authorize = function(handler) {
+
+    let user = window.App.user;
+
+    return user ? handler(user) : false;
+};
+
 /**
  * Next, we will create a fresh Vue application instance and attach it to
  * the page. Then, you may begin adding components to this application
  * or customize the JavaScript scaffolding to fit your unique needs.
  */
 
-Vue.component('example', require('./components/Example.vue'));
-
+Vue.component('flash', require('./components/Flash.vue'));
+Vue.component('thread', require('./components/Thread.vue'));
+Vue.component('paginator', require('./components/Paginator.vue'));
+Vue.component('notifications', require('./components/Notifications.vue'));
+Vue.component('avatar-form', require('./components/AvatarForm.vue'));
 const app = new Vue({
     el: '#app'
 });

@@ -12,16 +12,27 @@
 
     <!-- Styles -->
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+
     <style>
         body { padding-bottom: 100px; }
        .level { display: flex; align-items: center; }
        .flex { flex: 1; }
+       [v-cloak] {display: none;}
     </style>
+    <script>
+        window.App = {!! json_encode([
+          'signedIn' => Auth::check(),
+          'user' => Auth::user()
+        ]) !!};
+    </script>
+
+    @yield('reply-suggestion')
 </head>
 <body>
     <div id="app">
         @include('layouts.nav')
         @yield('content')
+        <flash message="{{session('flash')}}"></flash>
     </div>
 
     <!-- Scripts -->

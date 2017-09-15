@@ -10,20 +10,10 @@ class ProfilesController extends Controller
 {
     public function show(User $user)
     {
+
         return view('profiles.show',[
             'profileUser' => $user,
             'activities' => Activity::feed($user)
         ]);
-    }
-
-    /**
-     * @param User $user
-     * @return mixed
-     */
-    public function getActivity(User $user)
-    {
-        return $user->activity()->latest()->with('subject')->take(20)->get()->groupBy(function ($activity) {
-            return $activity->created_at->format('Y-m-d');
-        });
     }
 }

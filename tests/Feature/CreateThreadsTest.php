@@ -2,23 +2,33 @@
 
 namespace Tests\Feature;
 
+use App\Activity;
+use App\Thread;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\WithoutMiddleware;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 class CreateThreadsTest extends TestCase
 {
-    use DatabaseMigrations;
+    //use DatabaseMigrations;
 
     /** @test*/
     public function guests_cannot_create_forum_threads()
     {
-        //$this->expectException('Illuminate\Auth\AuthenticationException');
-
         $this->get('/threads/create')->assertRedirect('/login');
 
-        $this->post('/threads')->assertRedirect('/login');
+        $this->post(route('threads'))->assertRedirect('/login');
+    }
+
+    /** @test*/
+    public function new_users_must_first_confirm_their_email_address()
+    {
+        $user = factory('App\User')->states('unconfirmed')->create();
+
+        $this->signIn($user);
+
+        $thread = make('App\Thread');
+
+        $this->post(route('threads'), $thread->toArray())->assertRedirect('/threads')->assertSessionHas('flash', 'You must first confirm your email address.');
     }
 
     /** @test*/
@@ -28,7 +38,7 @@ class CreateThreadsTest extends TestCase
 
         $thread = make('App\Thread');
 
-        $response = $this->post('/threads', $thread->toArray());
+        $response = $this->post(route('threads'), $thread->toArray());
 
         $this->get($response->headers->get('Location'))->assertSee($thread->title)->assertSee($thread->body);
     }
@@ -83,7 +93,42 @@ class CreateThreadsTest extends TestCase
 
         $this->assertDatabaseMissing('threads', ['id' => $thread->id]);
         $this->assertDatabaseMissing('replies', ['id' => $reply->id]);
+
+        $this->assertEquals(0, Activity::count());
     }
+
+    /** @test*/
+    public function thread_requires_unique_slug()
+    {
+        $this->signIn();
+
+        create('App\Thread', [], 2);
+
+        $thread = create('App\Thread', ['title' => 'Foo Title']);
+
+        $this->assertEquals($thread->fresh()->slug, 'foo-title');
+
+        $thread = $this->postJson(route('threads'), $thread->toArray())->json();
+
+        $this->assertEquals("foo-title-{$thread['id']}", $thread['slug']);
+
+    }
+
+    /** @test */
+    public function thread_with_title_ending_in_number_should_generate_the_proper_slug()
+    {
+        $this->signIn();
+
+        $thread = create('App\Thread', ['title' => 'Some Title 24']);
+
+        $this->post(route('threads'), $thread->toArray());
+
+        $thread = $this->postJson(route('threads'), $thread->toArray())->json();
+
+        $this->assertTrue(Thread::whereSlug('foo-title-3')->exists());
+
+        $this->assertEquals("some-title-24-{$thread['id']}", $thread['slug']);
+     }
 
     public function publishThread($overrides = [])
     {
@@ -92,6 +137,6 @@ class CreateThreadsTest extends TestCase
 
         $thread = make('App\Thread', $overrides);
 
-        return $this->post('/threads', $thread->toArray());
+        return $this->post(route('threads'), $thread->toArray());
     }
 }

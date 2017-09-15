@@ -5,9 +5,8 @@ namespace App\Http\Controllers;
 use App\Channel;
 use App\Thread;
 use App\Filters\ThreadFilters;
-use App\User;
+use App\TrendingThreads;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\App;
 
 class ThreadsController extends Controller
 {
@@ -21,9 +20,10 @@ class ThreadsController extends Controller
      *
      * @param Channel $channel
      * @param ThreadFilters $filters
+     * @param TrendingThreads $trending_threads
      * @return \Illuminate\Http\Response
      */
-    public function index(Channel $channel, ThreadFilters $filters)
+    public function index(Channel $channel, ThreadFilters $filters, TrendingThreads $trending_threads)
     {
         $threads = $this->getThreads($channel, $filters);
 
@@ -31,7 +31,10 @@ class ThreadsController extends Controller
             return $threads;
         }
 
-        return view('threads.index', compact('threads'));
+        return view('threads.index', [
+            'threads' => $threads,
+            'trending_threads' => $trending_threads->get()
+        ]);
     }
 
     /**
@@ -52,9 +55,10 @@ class ThreadsController extends Controller
      */
     public function store(Request $request)
     {
+
         $this->validate($request, [
-            'title' => 'required',
-            'body' => 'required',
+            'title' => 'required|blockspam',
+            'body' => 'required|blockspam',
             'channel_id' => 'required|exists:channels,id'
         ]);
 
@@ -65,18 +69,31 @@ class ThreadsController extends Controller
             'body' => request('body')
         ]);
 
-        return redirect($thread->path());
+        if(request()->wantsJson()) {
+            return response($thread, 201);
+        }
+
+        return redirect($thread->path())->with('flash', 'Your thread has been published!');
     }
 
     /**
      * Display the specified resource.
      *
-     * @param $channelId
+     * @param $channel
      * @param  \App\Thread $thread
+     * @param TrendingThreads $trending_threads
      * @return \Illuminate\Http\Response
      */
-    public function show($channelId, Thread $thread)
+    public function show($channel, Thread $thread, TrendingThreads $trending_threads)
     {
+        if(auth()->check()) {
+            auth()->user()->read($thread);
+        }
+
+        $trending_threads->push($thread);
+
+        $thread->increment('visits_count');
+
         return view('threads.show', [
             'thread' => $thread,
             'replies' => $thread->replies()->paginate(10)
@@ -138,7 +155,6 @@ class ThreadsController extends Controller
             $threads->where('channel_id', $channel->id);
         }
 
-        $threads = $threads->get();
-        return $threads;
+        return $threads->paginate(10);
     }
 }
