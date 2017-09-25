@@ -5,12 +5,9 @@ namespace Tests\Unit;
 use Carbon\Carbon;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 class ReplyTest extends TestCase
 {
-    use DatabaseMigrations;
-
     /** @test */
     public function has_owner()
     {
@@ -42,10 +39,22 @@ class ReplyTest extends TestCase
     }
 
     /** @test */
-    public  function wraps_mentioned_usernames_in_the_body_within_anchor_tags()
+    public function wraps_mentioned_usernames_in_the_body_within_anchor_tags()
     {
         $reply = new \App\Reply(['body' => 'Hello @Jane-Doe.']);
 
         $this->assertEquals('Hello <a href="/profiles/Jane-Doe">@Jane-Doe</a>.', $reply->body);
+    }
+
+    /** @test */
+    public function detect_best_reply()
+    {
+        $reply = create('App\Reply');
+
+        $this->assertFalse($reply->isBest());
+
+        $reply->thread->update(['best_reply_id' => $reply->id]);
+
+        $this->assertTrue($reply->fresh()->isBest());
     }
 }

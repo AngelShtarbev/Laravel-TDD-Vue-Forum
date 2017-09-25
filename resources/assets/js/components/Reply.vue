@@ -1,5 +1,5 @@
 <template>
-    <div :id="'reply-'+id" class="panel panel-default">
+    <div :id="'reply-'+id" class="panel" :class="isBest ? 'panel-success': 'panel-default'">
         <div class="panel-heading">
             <div class="level">
                 <h4 class="flex"><a :href="'/profiles/'+data.owner.name" v-text="data.owner.name"></a> said <span v-text="ago"></span></h4>
@@ -22,14 +22,15 @@
             </div>
             <div v-else v-html="body" class="body"></div>
         </div>
+        <div class="panel-footer">
         <div v-if="canUpdate">
-        <div class="panel-footer">
             <button class="btn btn-primary" @click="editing = true">Edit</button>
-        </div>
-        <div class="panel-footer">
             <button class="btn btn-danger" @click="destroy">Delete</button>
         </div>
+        <div>
+           <button class="btn btn-default" @click="markBestReply" v-show="!isBest">Best Reply?</button>
         </div>
+      </div>
     </div>
 </template>
 <script>
@@ -43,7 +44,8 @@
            return {
              editing: false,
              id: this.data.id,
-             body: this.data.body
+             body: this.data.body,
+             isBest: false
            };
        },
        computed: {
@@ -58,7 +60,7 @@
          }
        },
        methods: {
-           update() {
+          update() {
               axios.patch('/replies/' + this.data.id, {
                   body: this.body
               }).catch(error => {
@@ -67,13 +69,16 @@
                    this.editing = false;
                });
 
-           },
+          },
           destroy() {
               axios.delete('/replies/' + this.data.id);
 
               this.$emit('deleted', this.data.id);
 
                flash('Reply successfully deleted !');
+          },
+          markBestReply() {
+             this.isBest = true;
           }
        }
     }

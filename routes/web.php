@@ -51,6 +51,8 @@ Route::delete('/threads/{channel}/{thread}/subscriptions', 'ThreadSubscriptionsC
 
 Route::get('/home', 'HomeController@index')->name('home');
 
+Route::post('/replies/{reply}/best', 'BestRepliesController@store')->name('best-replies.store');
+
 Route::delete('/profiles/{user}/notifications/{notification}', 'UserNotificationsController@destroy');
 
 Route::get('/profiles/{user}/notifications/', 'UserNotificationsController@index');

@@ -3,9 +3,7 @@
 namespace App;
 
 use App\Events\ThreadHasNewReply;
-use App\Notifications\ThreadWasUpdated;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Redis;
 
 class Thread extends Model
 {
@@ -110,5 +108,10 @@ class Thread extends Model
         }
 
         $this->attributes['slug'] = $slug;
+    }
+
+    public function markBestReply(Reply $reply)
+    {
+       $this->update(['best_reply_id' => $reply->id]);
     }
 }
